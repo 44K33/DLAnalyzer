@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Deck Analyzer</title>
+<!--FONTS--><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"><!--/FONTS-->
+<style>
+:root {
+  --bg: #0b0e13; --panel: #121722; --panel-2: #171e2c; --line: #232c3d; --text: #e7ebf3; --muted: #8b95a8; --faint: #5b6578;
+  --a: #55c8de; --b: #ee7b5f; --gold: #e3b04b; --good: #6fd39b; --bad: #ee7b5f;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-head: "Barlow Condensed", "Arial Narrow", "Barlow", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--font-body); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+h1 { font-family: var(--font-head); font-weight: 700; font-size: 36px; letter-spacing: .02em; text-transform: uppercase; margin: 0 0 4px; }
+h2 { font-family: var(--font-head); font-weight: 700; font-size: 22px; letter-spacing: .04em; text-transform: uppercase; margin: 28px 0 10px; }
+h3 { font-family: var(--font-head); font-weight: 600; font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+.sub { color: var(--muted); max-width: 70ch; margin: 0 0 18px; }
+button, select, input[type=text], input[type=search], textarea { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; }
+button { cursor: pointer; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 13px; }
+button:hover, select:hover { border-color: var(--faint); }
+button.primary { background: var(--gold); border-color: var(--gold); color: #0b0e13; }
+button.ghost { background: transparent; }
+textarea { width: 100%; min-height: 150px; font: 13px/1.5 var(--font-mono); resize: vertical; }
+label.inline { color: var(--muted); font-size: 13px; display: inline-flex; gap: 8px; align-items: center; }
+
+.bar-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.status { color: var(--muted); font-family: var(--font-mono); font-size: 12.5px; margin-left: auto; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.chip { display: inline-flex; gap: 6px; align-items: center; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; cursor: pointer; background: transparent; user-select: none; }
+.chip[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(227,176,75,.08); }
+.chip small { color: var(--faint); font-family: var(--font-mono); }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 20px 0 18px; overflow-x: auto; }
+.tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); font-family: var(--font-head); font-weight: 600; font-size: 17px; letter-spacing: .08em; text-transform: uppercase; padding: 8px 14px; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--gold); }
+.note { color: var(--muted); font-size: 13.5px; max-width: 80ch; margin: 6px 0 14px; }
+.empty { color: var(--faint); padding: 16px 0; }
+
+table.data { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+table.data th, table.data td { padding: 7px 12px; border-top: 1px solid var(--line); text-align: right; white-space: nowrap; }
+table.data th { font-family: var(--font-head); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; color: var(--muted); border-top: 0; background: var(--panel-2); }
+table.data th:first-child, table.data td:first-child { text-align: left; white-space: normal; }
+table.data td.num { font-family: var(--font-mono); font-size: 13px; }
+.tablewrap { overflow-x: auto; margin-bottom: 14px; }
+a.link, .link { color: var(--a); cursor: pointer; text-decoration: none; background: none; border: 0; padding: 0; font: inherit; text-transform: none; letter-spacing: 0; font-weight: 500; }
+.link:hover { text-decoration: underline; }
+.good { color: var(--good); } .badc { color: var(--bad); } .dim { color: var(--faint); }
+.meter { display: inline-block; vertical-align: middle; width: 70px; height: 6px; border-radius: 3px; background: #1b2332; overflow: hidden; margin-right: 8px; }
+.meter i { display: block; height: 100%; background: var(--a); }
+.split { display: inline-flex; vertical-align: middle; width: 90px; height: 8px; border-radius: 3px; overflow: hidden; background: #1b2332; }
+.split i:nth-child(1) { background: #496a8a; } .split i:nth-child(2) { background: #55c8de; } .split i:nth-child(3) { background: #e3b04b; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 10px 0 8px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.tile .v { font-family: var(--font-head); font-weight: 700; font-size: 30px; line-height: 1.1; }
+.tile .k { color: var(--muted); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; min-width: 0; }
+.panel h3:first-child { margin-top: 2px; }
+
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; }
+.list .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.list .meta { color: var(--faint); font-size: 12.5px; }
+.pl { font-family: var(--font-mono); font-size: 12px; padding: 1px 7px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.pl.top { border-color: var(--gold); color: var(--gold); }
+.tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+.tag { font-size: 12.5px; padding: 1px 8px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--line); }
+.tag.add { border-color: rgba(111,211,155,.5); color: var(--good); } .tag.rem { border-color: rgba(238,123,95,.5); color: var(--bad); } .tag.chg { border-color: rgba(227,176,75,.5); color: var(--gold); }
+.step { border-left: 2px solid var(--line); padding: 4px 0 4px 14px; margin: 0 0 14px 6px; }
+
+.cardref { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.art { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 4px; overflow: hidden; display: none; }
+.art.on { display: block; border: 1px solid var(--line); }
+.art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+[data-card] { cursor: default; }
+.artpreview { position: fixed; z-index: 60; width: 220px; pointer-events: none; border-radius: 8px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,.6); border: 1px solid var(--line); background: var(--panel); }
+.artpreview[hidden] { display: none; }
+.artpreview img { width: 100%; display: block; }
+
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(4,6,9,.75); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; }
+.modal[hidden] { display: none; }
+.sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: 100%; max-width: 760px; padding: 18px 20px; }
+.sheet header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.sheet h2 { margin: 0 0 4px; }
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 2px 18px; }
+.cardgrid .it { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
+.cardgrid .it b { font-family: var(--font-mono); font-weight: 500; color: var(--gold); width: 22px; flex: 0 0 auto; }
+.cb { color: var(--muted); font-size: 13px; }
+@media (max-width: 800px) { .two { grid-template-columns: 1fr; } h1 { font-size: 28px; } .status { margin-left: 0; } }
+
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Deck Analyzer</h1>
+  <p class="sub">Load the decks you saved from Format Library and look at the whole field of an event, not just the top cut. Everything stays in your browser.</p>
+
+  <div class="bar-card">
+    <div class="row">
+      <button class="primary" id="pick" type="button">Load deck files</button>
+      <input type="file" id="file" accept=".json,application/json" multiple hidden>
+      <button id="example" type="button">Use example data (made up)</button>
+      <button class="ghost" id="clear" type="button">Clear</button>
+      <span class="status" id="status" role="status"></span>
+    </div>
+    <div id="evrow" hidden><div class="chips" id="chips" aria-label="Events"></div></div>
+  </div>
+
+  <div class="tabs" id="tabs" role="tablist" hidden></div>
+  <div id="out"></div>
+</div>
+<div class="modal" id="modal" hidden><div class="sheet" id="sheet"></div></div>
+<script>
+/**
+ * Deck analysis for tournament decklists. Pure logic, no DOM, so it runs in the
+ * website and under Node for tests.
+ *
+ * Input: deck records as saved by the extension (the raw deck response from
+ * Format Library). normalizeDeck() turns one into
+ *   { id, event, eventName, name, builderId, builder, placement, date,
+ *     main:{card:copies}, extra:{...}, side:{...}, passcodes:{card:passcode} }
+ * "name" is the deck name (Warrior, Chaos Turbo, ...), not an archetype.
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.DeckAnalysis = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  // ---------- reading decks ----------
+
+  function countCards(list, passcodes) {
+    var out = {};
+    (list || []).forEach(function (c) {
+      if (c == null) return;
+      var name = typeof c === "string" ? c : c.name;
+      if (!name) return;
+      var n = 1;
+      if (typeof c === "object") {
+        var q = c.count != null ? c.count : c.copies != null ? c.copies : c.quantity != null ? c.quantity : c.amount != null ? c.amount : c.qty;
+        if (q != null && isFinite(+q) && +q > 0) n = +q;
+        var code = c.artworkId != null ? c.artworkId : c.passcode;
+        if (passcodes && code != null && !passcodes[name]) passcodes[name] = String(code);
+      }
+      out[name] = (out[name] || 0) + n;
+    });
+    return out;
+  }
+
+  function sum(o) { var t = 0; for (var k in o) t += o[k]; return t; }
+
+  function normalizeDeck(raw) {
+    if (!raw || raw.id == null) return null;
+    var passcodes = {};
+    var ev = raw.event || {};
+    return {
+      id: raw.id,
+      event: raw.eventAbbreviation || ev.abbreviation || "?",
+      eventName: ev.name || raw.eventAbbreviation || "?",
+      eventId: raw.eventId != null ? raw.eventId : ev.id,
+      name: raw.deckTypeName || raw.name || "Unknown",
+      builderId: raw.builderId || raw.builderName || "unknown",
+      builder: raw.builderName || (raw.builder && raw.builder.name) || "Unknown",
+      placement: raw.placement != null ? +raw.placement : null,
+      date: raw.publishDate || raw.updatedAt || null,
+      format: raw.formatName || null,
+      main: countCards(raw.main, passcodes),
+      extra: countCards(raw.extra, passcodes),
+      side: countCards(raw.side, passcodes),
+      passcodes: passcodes
+    };
+  }
+
+  // Merges decks by id; a later copy of the same deck replaces the earlier one.
+  function mergeDecks(existing, incoming) {
+    var byId = {};
+    (existing || []).forEach(function (d) { byId[d.id] = d; });
+    (incoming || []).forEach(function (d) { if (d) byId[d.id] = d; });
+    return Object.keys(byId).map(function (k) { return byId[k]; });
+  }
+
+  // ---------- events ----------
+
+  function eventsOf(decks) {
+    var map = {};
+    decks.forEach(function (d) {
+      var e = map[d.event] || (map[d.event] = { abbr: d.event, name: d.eventName, size: 0, date: null, ids: d.eventId });
+      e.size++;
+      if (d.date && (!e.date || d.date < e.date)) e.date = d.date;
+    });
+    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) {
+      return (a.date || "") < (b.date || "") ? -1 : (a.date || "") > (b.date || "") ? 1 : (a.abbr < b.abbr ? -1 : 1);
+    });
+  }
+
+  function filterEvents(decks, abbrs) {
+    if (!abbrs || !abbrs.length) return decks;
+    var set = {};
+    abbrs.forEach(function (a) { set[a] = true; });
+    return decks.filter(function (d) { return set[d.event]; });
+  }
+
+  function sizeByEvent(decks) {
+    var s = {};
+    decks.forEach(function (d) { s[d.event] = (s[d.event] || 0) + 1; });
+    return s;
+  }
+
+  // ---------- the field: share and conversion per deck name ----------
+
+  // conversion at N = (share of the top N that played this deck) / (share of the whole field that played it).
+  // Above 1 means the deck did better than its popularity; below 1 means worse.
+  function fieldStats(decks, cuts) {
+    cuts = cuts || [8, 16, 32];
+    var total = decks.length;
+    var cutTotals = {};
+    cuts.forEach(function (n) { cutTotals[n] = decks.filter(function (d) { return d.placement != null && d.placement <= n; }).length; });
+    var rows = {};
+    decks.forEach(function (d) {
+      var r = rows[d.name] || (rows[d.name] = { name: d.name, count: 0, top: {}, placements: [], best: null });
+      r.count++;
+      if (d.placement != null) {
+        r.placements.push(d.placement);
+        if (r.best == null || d.placement < r.best) r.best = d.placement;
+        cuts.forEach(function (n) { if (d.placement <= n) r.top[n] = (r.top[n] || 0) + 1; });
+      }
+    });
+    return Object.keys(rows).map(function (k) {
+      var r = rows[k];
+      r.share = total ? r.count / total : 0;
+      r.avgPlacement = r.placements.length ? r.placements.reduce(function (a, b) { return a + b; }, 0) / r.placements.length : null;
+      r.conv = {};
+      cuts.forEach(function (n) {
+        var inTop = r.top[n] || 0;
+        r.top[n] = inTop;
+        r.conv[n] = cutTotals[n] && r.share ? (inTop / cutTotals[n]) / r.share : null;
+      });
+      return r;
+    }).sort(function (a, b) { return b.count - a.count || (a.name < b.name ? -1 : 1); });
+  }
+
+  // ---------- one deck name: core and flex cards, best lists ----------
+
+  function cardTable(decks, zone) {
+    var rows = {};
+    decks.forEach(function (d) {
+      var z = d[zone] || {};
+      Object.keys(z).forEach(function (c) {
+        var r = rows[c] || (rows[c] = { name: c, decks: 0, copies: { 1: 0, 2: 0, 3: 0 }, total: 0 });
+        r.decks++;
+        r.total += z[c];
+        var k = Math.min(3, z[c]);
+        r.copies[k] = (r.copies[k] || 0) + 1;
+      });
+    });
+    return Object.keys(rows).map(function (k) {
+      var r = rows[k];
+      r.pct = decks.length ? r.decks / decks.length : 0;
+      r.avgCopies = r.total / r.decks;
+      return r;
+    }).sort(function (a, b) { return b.decks - a.decks || (a.name < b.name ? -1 : 1); });
+  }
+
+  // core = in at least coreAt of the lists, flex = the rest
+  function coreFlex(decks, zone, coreAt) {
+    coreAt = coreAt == null ? 0.8 : coreAt;
+    var t = cardTable(decks, zone);
+    return { core: t.filter(function (r) { return r.pct >= coreAt; }), flex: t.filter(function (r) { return r.pct < coreAt; }) };
+  }
+
+  function relPlacement(d, sizes) {
+    return d.placement != null && sizes[d.event] ? d.placement / sizes[d.event] : 1;
+  }
+
+  // Best finishes first. Across events the finish is compared as a fraction of the field.
+  function bestLists(decks, sizes, n) {
+    return decks.slice().sort(function (a, b) {
+      return relPlacement(a, sizes) - relPlacement(b, sizes) || (a.placement || 1e9) - (b.placement || 1e9);
+    }).slice(0, n || 10);
+  }
+
+  // ---------- one card ----------
+
+  function cardUsage(decks, card, sizes) {
+    var key = card.toLowerCase();
+    var has = [], without = [];
+    decks.forEach(function (d) {
+      var found = false;
+      ["main", "side", "extra"].forEach(function (z) { Object.keys(d[z]).forEach(function (c) { if (c.toLowerCase() === key) found = true; }); });
+      (found ? has : without).push(d);
+    });
+    function avgRel(list) {
+      if (!list.length) return null;
+      return list.reduce(function (s, d) { return s + relPlacement(d, sizes); }, 0) / list.length;
+    }
+    var byDeck = {};
+    has.forEach(function (d) { byDeck[d.name] = (byDeck[d.name] || 0) + 1; });
+    var copies = { main: { 0: 0, 1: 0, 2: 0, 3: 0 }, side: { 0: 0, 1: 0, 2: 0, 3: 0 } };
+    decks.forEach(function (d) {
+      ["main", "side"].forEach(function (z) {
+        var n = 0;
+        Object.keys(d[z]).forEach(function (c) { if (c.toLowerCase() === key) n += d[z][c]; });
+        copies[z][Math.min(3, n)]++;
+      });
+    });
+    var perEvent = {};
+    var evSizes = sizeByEvent(decks);
+    has.forEach(function (d) { perEvent[d.event] = (perEvent[d.event] || 0) + 1; });
+    return {
+      card: card,
+      decks: has.length,
+      pct: decks.length ? has.length / decks.length : 0,
+      avgRelWith: avgRel(has),
+      avgRelWithout: avgRel(without),
+      byDeck: Object.keys(byDeck).map(function (k) { return { name: k, count: byDeck[k] }; }).sort(function (a, b) { return b.count - a.count; }),
+      copies: copies,
+      perEvent: Object.keys(evSizes).map(function (e) { return { event: e, count: perEvent[e] || 0, size: evSizes[e], pct: (perEvent[e] || 0) / evSizes[e] }; }),
+      best: bestLists(has, sizes, 5)
+    };
+  }
+
+  function allCardNames(decks) {
+    var set = {};
+    decks.forEach(function (d) { ["main", "side", "extra"].forEach(function (z) { Object.keys(d[z]).forEach(function (c) { set[c] = (set[c] || 0) + 1; }); }); });
+    return Object.keys(set).sort(function (a, b) { return set[b] - set[a] || (a < b ? -1 : 1); });
+  }
+
+  // ---------- comparing two events ----------
+
+  function usageMap(decks, zones) {
+    var m = {};
+    decks.forEach(function (d) {
+      var seen = {};
+      zones.forEach(function (z) { Object.keys(d[z]).forEach(function (c) { seen[c] = true; }); });
+      Object.keys(seen).forEach(function (c) { m[c] = (m[c] || 0) + 1; });
+    });
+    return m;
+  }
+
+  function compareEvents(a, b, opts) {
+    opts = opts || {};
+    var minSupport = opts.minSupport || 3;
+    var fa = fieldStats(a), fb = fieldStats(b);
+    var names = {};
+    fa.concat(fb).forEach(function (r) { names[r.name] = true; });
+    var shareA = {}, shareB = {}, bestA = {}, bestB = {};
+    fa.forEach(function (r) { shareA[r.name] = r.share; bestA[r.name] = r.best; });
+    fb.forEach(function (r) { shareB[r.name] = r.share; bestB[r.name] = r.best; });
+    var decksRows = Object.keys(names).map(function (n) {
+      return { name: n, shareA: shareA[n] || 0, shareB: shareB[n] || 0, delta: (shareB[n] || 0) - (shareA[n] || 0), bestA: bestA[n] == null ? null : bestA[n], bestB: bestB[n] == null ? null : bestB[n] };
+    }).sort(function (x, y) { return Math.abs(y.delta) - Math.abs(x.delta); });
+
+    var ua = usageMap(a, ["main", "side"]), ub = usageMap(b, ["main", "side"]);
+    var cards = {};
+    Object.keys(ua).concat(Object.keys(ub)).forEach(function (c) { cards[c] = true; });
+    var cardRows = Object.keys(cards).map(function (c) {
+      var pa = a.length ? (ua[c] || 0) / a.length : 0, pb = b.length ? (ub[c] || 0) / b.length : 0;
+      return { name: c, pctA: pa, pctB: pb, delta: pb - pa, countA: ua[c] || 0, countB: ub[c] || 0 };
+    }).filter(function (r) { return r.countA >= minSupport || r.countB >= minSupport; });
+    return {
+      sizeA: a.length, sizeB: b.length,
+      decks: decksRows,
+      risers: cardRows.slice().sort(function (x, y) { return y.delta - x.delta; }).slice(0, 15),
+      fallers: cardRows.slice().sort(function (x, y) { return x.delta - y.delta; }).slice(0, 15)
+    };
+  }
+
+  // ---------- players ----------
+
+  function diffDecks(prev, next) {
+    function diffZone(a, b) {
+      var added = [], removed = [], changed = [];
+      Object.keys(b).forEach(function (c) {
+        if (!a[c]) added.push({ name: c, copies: b[c] });
+        else if (a[c] !== b[c]) changed.push({ name: c, from: a[c], to: b[c] });
+      });
+      Object.keys(a).forEach(function (c) { if (!b[c]) removed.push({ name: c, copies: a[c] }); });
+      return { added: added, removed: removed, changed: changed };
+    }
+    return { sameDeckName: prev.name === next.name, main: diffZone(prev.main, next.main), side: diffZone(prev.side, next.side) };
+  }
+
+  function players(decks) {
+    var map = {};
+    decks.forEach(function (d) {
+      var p = map[d.builderId] || (map[d.builderId] = { id: d.builderId, names: {}, decks: [] });
+      p.names[d.builder] = true;
+      p.decks.push(d);
+    });
+    return Object.keys(map).map(function (k) {
+      var p = map[k];
+      p.name = Object.keys(p.names).join(" / ");
+      p.decks.sort(function (a, b) { return (a.date || "") < (b.date || "") ? -1 : (a.date || "") > (b.date || "") ? 1 : 0; });
+      return p;
+    });
+  }
+
+  function playerHistory(decks, builderId) {
+    var p = players(decks).filter(function (x) { return x.id === builderId; })[0];
+    if (!p) return null;
+    var steps = [];
+    for (var i = 1; i < p.decks.length; i++) steps.push({ from: p.decks[i - 1], to: p.decks[i], diff: diffDecks(p.decks[i - 1], p.decks[i]) });
+    return { player: p, steps: steps };
+  }
+
+  // ---------- strange decks and cards ----------
+
+  function docFreq(decks) {
+    var df = {};
+    decks.forEach(function (d) {
+      var seen = {};
+      ["main", "side"].forEach(function (z) { Object.keys(d[z]).forEach(function (c) { seen[c] = true; }); });
+      Object.keys(seen).forEach(function (c) { df[c] = (df[c] || 0) + 1; });
+    });
+    return df;
+  }
+
+  function rareCards(decks, maxDecks) {
+    maxDecks = maxDecks || 2;
+    var df = docFreq(decks);
+    return Object.keys(df).filter(function (c) { return df[c] <= maxDecks; }).map(function (c) {
+      return { name: c, decks: decks.filter(function (d) { return d.main[c] || d.side[c]; }) };
+    }).sort(function (a, b) { return a.decks.length - b.decks.length || (a.name < b.name ? -1 : 1); });
+  }
+
+  // Weirdness = average surprise of the distinct main deck cards, where a card
+  // seen in few decks is more surprising: ln(N / decksWithCard).
+  function weirdness(decks, n) {
+    var df = docFreq(decks), N = decks.length;
+    return decks.map(function (d) {
+      var cards = Object.keys(d.main);
+      var items = cards.map(function (c) { return { name: c, s: Math.log(N / df[c]), decks: df[c] }; });
+      var score = items.length ? items.reduce(function (s, i) { return s + i.s; }, 0) / items.length : 0;
+      return { deck: d, score: score, odd: items.sort(function (a, b) { return b.s - a.s; }).slice(0, 5) };
+    }).sort(function (a, b) { return b.score - a.score; }).slice(0, n || 15);
+  }
+
+  // How far each list is from the usual list of its deck name:
+  // 1 minus the overlap between its card set and the cards most lists of that name run.
+  function deviation(decks, minDecks, n) {
+    minDecks = minDecks || 5;
+    var groups = {};
+    decks.forEach(function (d) { (groups[d.name] = groups[d.name] || []).push(d); });
+    var out = [];
+    Object.keys(groups).forEach(function (name) {
+      var g = groups[name];
+      if (g.length < minDecks) return;
+      var t = cardTable(g, "main");
+      var norm = {};
+      t.forEach(function (r) { if (r.pct >= 0.5) norm[r.name] = true; });
+      var normSize = Object.keys(norm).length;
+      g.forEach(function (d) {
+        var own = Object.keys(d.main);
+        var inter = own.filter(function (c) { return norm[c]; }).length;
+        var union = own.length + normSize - inter;
+        out.push({
+          deck: d, group: g.length, distance: union ? 1 - inter / union : 0,
+          missing: Object.keys(norm).filter(function (c) { return !d.main[c]; }),
+          extras: own.filter(function (c) { return !norm[c]; })
+        });
+      });
+    });
+    return out.sort(function (a, b) { return b.distance - a.distance; }).slice(0, n || 15);
+  }
+
+  // ---------- find similar ----------
+
+  function similarity(a, b) {
+    var inter = 0, uni = 0, seen = {};
+    Object.keys(a).forEach(function (c) { seen[c] = true; });
+    Object.keys(b).forEach(function (c) { seen[c] = true; });
+    Object.keys(seen).forEach(function (c) { var x = a[c] || 0, y = b[c] || 0; inter += Math.min(x, y); uni += Math.max(x, y); });
+    return uni ? inter / uni : 0;
+  }
+
+  function findSimilar(mine, decks, n) {
+    return decks.map(function (d) {
+      var diff = diffDecks({ name: "", main: mine, side: {} }, { name: "", main: d.main, side: {} }).main;
+      return { deck: d, sim: similarity(mine, d.main), theyRun: diff.added.concat(diff.changed.filter(function (c) { return c.to > c.from; }).map(function (c) { return { name: c.name, copies: c.to - c.from }; })), youRun: diff.removed.concat(diff.changed.filter(function (c) { return c.to < c.from; }).map(function (c) { return { name: c.name, copies: c.from - c.to }; })) };
+    }).sort(function (a, b) { return b.sim - a.sim; }).slice(0, n || 10);
+  }
+
+  // ---------- reading a pasted list ----------
+
+  function passcodeMap(decks) {
+    var byCode = {};
+    decks.forEach(function (d) { Object.keys(d.passcodes).forEach(function (n) { byCode[d.passcodes[n]] = n; }); });
+    return byCode;
+  }
+
+  function decodeYdke(text) {
+    var m = /ydke:\/\/([^!]*)!([^!]*)!([^!]*)!/.exec(text);
+    if (!m) return null;
+    function dec(b64) {
+      if (!b64) return [];
+      var bin = typeof atob === "function" ? atob(b64) : Buffer.from(b64, "base64").toString("binary");
+      var out = [];
+      for (var i = 0; i + 3 < bin.length; i += 4) out.push(String((bin.charCodeAt(i) | (bin.charCodeAt(i + 1) << 8) | (bin.charCodeAt(i + 2) << 16) | (bin.charCodeAt(i + 3) << 24)) >>> 0));
+      return out;
+    }
+    return { main: dec(m[1]), extra: dec(m[2]), side: dec(m[3]) };
+  }
+
+  // Accepts a ydke:// link, a .ydk file (passcodes) or lines like "3 Jar of Greed" / "Jar of Greed x3".
+  // Returns { main:{card:copies}, unknown:[codes] }.
+  function parseList(text, byCode) {
+    var main = {}, unknown = [];
+    function add(name, n) { main[name] = (main[name] || 0) + n; }
+    var y = decodeYdke(text);
+    var codes = null;
+    if (y) codes = y.main;
+    else if (/#main/i.test(text) || /^\d{5,9}\s*$/m.test(text)) {
+      codes = [];
+      var inMain = !/#main/i.test(text);
+      text.split(/\r?\n/).forEach(function (l) {
+        l = l.trim();
+        if (/^#main/i.test(l)) inMain = true;
+        else if (/^(#extra|!side)/i.test(l)) inMain = false;
+        else if (inMain && /^\d+$/.test(l)) codes.push(l);
+      });
+    }
+    if (codes) {
+      codes.forEach(function (c) { if (byCode && byCode[c]) add(byCode[c], 1); else unknown.push(c); });
+      return { main: main, unknown: unknown };
+    }
+    text.split(/\r?\n/).forEach(function (l) {
+      l = l.trim();
+      if (!l || /^[#!]/.test(l)) return;
+      var m = /^(\d+)\s*x?\s+(.+)$/i.exec(l) || /^(.+?)\s+x\s*(\d+)$/i.exec(l);
+      if (m) {
+        if (/^\d+$/.test(m[1])) add(m[2].trim(), +m[1]); else add(m[1].trim(), +m[2]);
+      } else add(l, 1);
+    });
+    return { main: main, unknown: unknown };
+  }
+
+  return {
+    normalizeDeck: normalizeDeck, mergeDecks: mergeDecks, eventsOf: eventsOf, filterEvents: filterEvents, sizeByEvent: sizeByEvent,
+    fieldStats: fieldStats, cardTable: cardTable, coreFlex: coreFlex, bestLists: bestLists, relPlacement: relPlacement,
+    cardUsage: cardUsage, allCardNames: allCardNames, compareEvents: compareEvents, diffDecks: diffDecks, players: players,
+    playerHistory: playerHistory, rareCards: rareCards, weirdness: weirdness, deviation: deviation, similarity: similarity,
+    findSimilar: findSimilar, passcodeMap: passcodeMap, parseList: parseList, decodeYdke: decodeYdke, docFreq: docFreq
+  };
+});
+
+</script>
+<script>
+// MADE UP example data in the same shape as the extension's saved decks, so the
+// website can be tried without any real export. The cards are real Goat Format
+// cards, but the decks, players and placements are invented.
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.SampleData = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+  function rng(seed) { var s = seed >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+
+  var STAPLES = ["Heavy Storm", "Mystical Space Typhoon", "Mirror Force", "Torrential Tribute", "Call of the Haunted", "Raigeki", "Dark Hole", "Smashing Ground", "Nobleman of Crossout", "Delinquent Duo", "Snatch Steal", "Premature Burial", "Book of Moon", "Solemn Judgment", "Trap Dustshoot", "Jar of Greed", "Graceful Charity", "Creature Swap", "Scapegoat", "Pot of Greed", "Dust Tornado", "Reinforcement of the Army", "Bottomless Trap Hole", "Sakuretsu Armor", "Ring of Destruction", "Exiled Force", "Breaker the Magical Warrior", "Don Zaloog", "Tribe-Infecting Virus", "Kycoo the Ghost Destroyer", "Ninja Grandmaster Sasuke", "D.D. Warrior Lady", "Blade Knight", "Sinister Serpent", "Sangan", "Witch of the Black Forest", "Nobleman of Extermination", "Upstart Goblin", "Gravekeeper's Spy", "Morphing Jar"];
+  var RARE = ["Dimensional Prison", "Magic Cylinder", "Zero Gravity", "Gemini Elf", "Penguin Soldier", "Mask of Restrict", "Swords of Revealing Light", "Messenger of Peace", "Lightning Vortex", "Giant Trunade", "Rush Recklessly", "Tsukuyomi", "Magician of Faith", "Reasoning", "Gift of The Mystical Elf", "Banisher of the Light", "Ookazi", "Last Will", "Sanctuary in the Sky", "Spirit Reaper"];
+  var ODD = ["Fiber Jar", "Mystic Tomato", "Man-Eater Bug Rush", "Cyber Dragon Egg", "Hysteric Fairy", "Big Shield Gardna"];
+  var DECKS = {
+    "Warrior": ["Black Luster Soldier - Envoy of the Beginning", "Blade Knight", "Breaker the Magical Warrior", "D.D. Warrior Lady", "Don Zaloog", "Exiled Force", "Kycoo the Ghost Destroyer", "Mystic Swordsman LV2", "Ninja Grandmaster Sasuke", "Tribe-Infecting Virus"],
+    "Chaos Turbo": ["Black Luster Soldier - Envoy of the Beginning", "Chaos Sorcerer", "Sinister Serpent", "Sangan", "Witch of the Black Forest", "Gravekeeper's Spy", "Pot of Greed", "Reinforcement of the Army", "Premature Burial", "Allure of Darkness"],
+    "Chaos Control": ["Black Luster Soldier - Envoy of the Beginning", "Chaos Sorcerer", "Sinister Serpent", "Gravekeeper's Spy", "Morphing Jar", "Cyber Jar", "Tribe-Infecting Virus", "Exiled Force", "Nobleman of Extermination", "Shining Angel"],
+    "Goat Control": ["Airknight Parshath", "Chaos Sorcerer", "Cyber Jar", "Magician of Faith", "Sinister Serpent", "Tribe-Infecting Virus", "Black Luster Soldier - Envoy of the Beginning", "Mobius the Frost Monarch", "Spirit Reaper", "Thunder Dragon"],
+    "Cat Burn": ["Neko Mane King", "Wild Nature's Release", "Gravity Bind", "Ceasefire", "Ookazi", "Cat Burn Mask", "Dark Hole", "Swords of Revealing Light", "Messenger of Peace", "Jinzo"],
+    "Ben Kei OTK": ["Ben Kei", "Ancient Telescope", "Rush Recklessly", "Axe of Despair", "Mad Sword Beast", "Cyber Jar", "Fiend Skull Dragon", "Cure Mermaid", "Mystic Plasma Zone", "Giant Trunade"]
+  };
+  var NAMES = ["sdlkilla", "Pooh-Bah", "KreBz", "dkerke", "Tiso", "NotDan", "Abolf", "Kif", "Godot", "scrub4life", "Nigam", "Viziel", "DDaymeric", "jacksworn", "goolahz", "Michelo", "Startstr", "puy", "Seraphim", "Lavina", "yaskweenld", "mp3107", "barcode", "patrickzer0", "Coach J", "Riclar91", "Alderoth", "Loker23", "srdjan1409", "Charlie MAD", "natedogg29", "AJTBLS", "JonDoe297", "zainoman", "Slim", "Rados", "confuserei", "EndUser", "Coco22", "Kit", "giallo", "bronzeswagger", "Bounty", "Valtinos", "Void", "Cesar", "Adwaita", "Jlu", "Ez2Slayu", "Little Mist"];
+  var DECK_WEIGHTS = [["Warrior", 25], ["Chaos Turbo", 22], ["Chaos Control", 20], ["Goat Control", 12], ["Cat Burn", 8], ["Ben Kei OTK", 4]];
+
+  function pick(r, list) { return list[Math.floor(r() * list.length)]; }
+  function weighted(r, table) { var t = table.reduce(function (s, x) { return s + x[1]; }, 0), x = r() * t; for (var i = 0; i < table.length; i++) { x -= table[i][1]; if (x < 0) return table[i][0]; } return table[0][0]; }
+  function copies(r) { var x = r(); return x < 0.45 ? 1 : x < 0.75 ? 2 : 3; }
+
+  function buildDeck(r, deckName, shift) {
+    var core = DECKS[deckName];
+    var main = [], used = {};
+    core.forEach(function (c) { var n = copies(r); for (var i = 0; i < n; i++) main.push(c); used[c] = true; });
+    var pool = STAPLES.concat(RARE.slice(0, 8 + shift));
+    while (main.length < 40) { var c = pick(r, pool); if (!used[c] || r() < 0.3) { used[c] = true; main.push(c); } }
+    main = main.slice(0, 40);
+    if (r() < 0.06) { main[main.length - 1] = pick(r, ODD); }
+    var side = [];
+    for (var i = 0; i < 15; i++) side.push(pick(r, STAPLES.concat(RARE)));
+    return { main: main, side: side };
+  }
+
+  // Returns { events: [...], decks: [raw deck responses] }
+  function build() {
+    var r = rng(43);
+    var events = [
+      { abbr: "GFC25", name: "Goat Format Championship 25 (made up)", id: 2900, size: 64, date: "2025-09-27T17:00:00.000Z" },
+      { abbr: "GGP26", name: "Goat Grand Prix 26 (made up)", id: 2940, size: 72, date: "2026-03-14T17:00:00.000Z" },
+      { abbr: "GFC26", name: "Goat Format Championship 26 (made up)", id: 2985, size: 80, date: "2026-09-27T17:00:00.000Z" }
+    ];
+    var decks = [], id = 90000;
+    var shift = 0;
+    events.forEach(function (e, ei) {
+      shift += ei * 4;
+      for (var p = 1; p <= e.size; p++) {
+        var dn = weighted(r, DECK_WEIGHTS.map(function (d) { return [d[0], d[1] + (d[0] === "Chaos Turbo" && ei === 2 ? 14 : 0) + (d[0] === "Warrior" && ei === 0 ? 10 : 0)]; }));
+        // regular players come back with a similar list
+        var pl = NAMES[(p * 7 + ei * 3) % NAMES.length];
+        if (p <= 12) pl = NAMES[(p * 5) % NAMES.length];
+        var d = buildDeck(r, dn, shift);
+        function cards(list) { return list.map(function (c) { return { name: c, cleanName: c, id: c.length * 31, artworkId: String(10000000 + c.split("").reduce(function (s, ch) { return (s * 31 + ch.charCodeAt(0)) % 80000000; }, 7)) }; }); }
+        decks.push({
+          id: id++, deckTypeName: dn, builderName: pl, builderId: "id-" + pl, placement: p, eventAbbreviation: e.abbr,
+          event: { id: e.id, name: e.name, abbreviation: e.abbr }, formatName: "Goat", publishDate: e.date,
+          main: cards(d.main), extra: [], side: cards(d.side)
+        });
+      }
+    });
+    return { events: events, decks: decks };
+  }
+  return { build: build };
+});
+
+</script>
+<script>
+// Card pictures for the analyzer. Looks each card name up on YGOPRODeck once,
+// remembers the answer in localStorage, and never blocks the page: if a lookup
+// or an image fails, the text row simply stays text.
+(function (root) {
+  "use strict";
+  var API = "https://db.ygoprodeck.com/api/v7/cardinfo.php?name=";
+  var IMG = "https://images.ygoprodeck.com/images/";
+  var KEY = "duel-log-analyzer-cardids-v1";
+  var MAX_PARALLEL = 4;
+
+  var ids = {};          // lower-case name -> numeric id, or 0 when YGOPRODeck has no such card
+  var pending = {};      // lower-case name -> true while a lookup is running
+  var waiting = [];      // names queued for lookup
+  var running = 0;
+  var listeners = [];
+
+  try { ids = JSON.parse(root.localStorage.getItem(KEY) || "{}") || {}; } catch (e) { ids = {}; }
+  function save() { try { root.localStorage.setItem(KEY, JSON.stringify(ids)); } catch (e) {} }
+
+  function thumbUrl(id) { return IMG + "cards_cropped/" + id + ".jpg"; }
+  function fullUrl(id) { return IMG + "cards/" + id + ".jpg"; }
+
+  function pump() {
+    while (running < MAX_PARALLEL && waiting.length) {
+      (function (name) {
+        running++;
+        var key = name.toLowerCase();
+        root.fetch(API + encodeURIComponent(name))
+          .then(function (r) {
+            // YGOPRODeck answers 400 for a name it does not know: remember that as "no art".
+            if (r.status === 400) return { data: [] };
+            if (!r.ok) throw new Error("http " + r.status);
+            return r.json();
+          })
+          .then(function (j) {
+            ids[key] = (j && j.data && j.data[0] && j.data[0].id) || 0;
+            save();
+          })
+          .catch(function () { /* network trouble: leave it unknown, try again next page load */ })
+          .then(function () {
+            delete pending[key];
+            running--;
+            listeners.forEach(function (f) { f(); });
+            pump();
+          });
+      })(waiting.shift());
+    }
+  }
+
+  function want(name) {
+    var key = String(name).toLowerCase();
+    if (key in ids || pending[key]) return;
+    pending[key] = true;
+    waiting.push(name);
+  }
+
+  var CardArt = {
+    thumbUrl: thumbUrl,
+    fullUrl: fullUrl,
+    idFor: function (name) { var k = String(name).toLowerCase(); return k in ids ? ids[k] : null; },
+    onUpdate: function (f) { listeners.push(f); },
+    // Fill every [data-card] element under `rootEl` with a thumbnail once its id is known.
+    decorate: function (rootEl) {
+      var els = rootEl.querySelectorAll("[data-card]");
+      Array.prototype.forEach.call(els, function (el) {
+        var name = el.getAttribute("data-card");
+        var id = CardArt.idFor(name);
+        if (id === null) { want(name); return; }
+        var slot = el.querySelector(".art");
+        if (!slot || slot.firstChild || !id) return;
+        var img = new root.Image();
+        img.alt = "";
+        img.onload = function () { slot.classList.add("on"); };
+        img.onerror = function () { slot.removeChild(img); };
+        img.src = thumbUrl(id);
+        slot.appendChild(img);
+      });
+      pump();
+    },
+    // One floating big picture that follows the pointer over any [data-card] element.
+    enablePreview: function (container) {
+      var doc = container.ownerDocument;
+      var box = doc.createElement("div");
+      box.className = "artpreview";
+      box.hidden = true;
+      var img = doc.createElement("img");
+      img.alt = "";
+      box.appendChild(img);
+      doc.body.appendChild(box);
+      var current = null;
+      function place(e) {
+        var w = 220, h = 322, m = 16;
+        var x = e.clientX + m, y = e.clientY + m;
+        if (x + w > root.innerWidth) x = e.clientX - w - m;
+        if (y + h > root.innerHeight) y = Math.max(4, root.innerHeight - h - 4);
+        box.style.left = Math.max(4, x) + "px";
+        box.style.top = y + "px";
+      }
+      container.addEventListener("mouseover", function (e) {
+        var el = e.target.closest ? e.target.closest("[data-card]") : null;
+        if (!el || !container.contains(el)) return;
+        var id = CardArt.idFor(el.getAttribute("data-card"));
+        if (!id) return;
+        current = el;
+        img.src = fullUrl(id);
+        box.hidden = false;
+        place(e);
+      });
+      container.addEventListener("mousemove", function (e) { if (current && !box.hidden) place(e); });
+      container.addEventListener("mouseout", function (e) {
+        var el = e.target.closest ? e.target.closest("[data-card]") : null;
+        if (el && el === current && !el.contains(e.relatedTarget)) { box.hidden = true; current = null; }
+      });
+    }
+  };
+
+  root.CardArt = CardArt;
+})(typeof window !== "undefined" ? window : this);
+
+</script>
+<script>
+(function () {
+  "use strict";
+  var A = window.DeckAnalysis;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var S = {
+    decks: [],            // normalised decks, every event loaded
+    events: [],
+    picked: {},           // event abbr -> true (events shown in the views)
+    tab: "field",
+    deckName: null,
+    coreAt: 0.8,
+    card: "",
+    cmpA: null, cmpB: null,
+    player: null, playerQuery: "",
+    rareMax: 2,
+    pasted: "",
+    similar: null
+  };
+
+  // ---------- helpers ----------
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
+  }
+  function pct(x, d) { return (x * 100).toFixed(d == null ? 0 : d) + "%"; }
+  function card(name, extra) {
+    return '<span class="cardref" data-card="' + esc(name) + '"><span class="art"></span><span class="cname">' + esc(name) + "</span>" + (extra || "") + "</span>";
+  }
+  function plc(p) { return p == null ? "?" : p + (p === 1 ? "st" : p === 2 ? "nd" : p === 3 ? "rd" : "th"); }
+  function dkey(d) { return d.event + ":" + d.id; }
+  function view() { return A.filterEvents(S.decks, Object.keys(S.picked).filter(function (k) { return S.picked[k]; })); }
+  function sizes() { return A.sizeByEvent(S.decks); }
+  function copiesSplit(c) {
+    var t = (c[1] || 0) + (c[2] || 0) + (c[3] || 0) || 1;
+    return '<span class="split" title="1 copy ' + (c[1] || 0) + ", 2 copies " + (c[2] || 0) + ", 3 copies " + (c[3] || 0) + '"><i style="width:' + (100 * (c[1] || 0) / t) + '%"></i><i style="width:' + (100 * (c[2] || 0) / t) + '%"></i><i style="width:' + (100 * (c[3] || 0) / t) + '%"></i></span>';
+  }
+  function deckLink(d, label) { return '<button class="link" data-open="' + esc(d.id) + '">' + (label || esc(d.name)) + "</button>"; }
+  function who(d) { return esc(d.builder) + ' <span class="dim">' + esc(d.event) + "</span>"; }
+  function plTag(d) { return '<span class="pl' + (d.placement != null && d.placement <= 8 ? " top" : "") + '">' + plc(d.placement) + "</span>"; }
+  function tagList(list, cls, fmt) {
+    return list.length ? '<div class="tags">' + list.map(function (x) { return '<span class="tag ' + cls + '" data-card="' + esc(x.name) + '">' + esc(fmt ? fmt(x) : x.name) + "</span>"; }).join("") + "</div>" : "";
+  }
+
+  // ---------- storage (IndexedDB, best effort) ----------
+  function idb(cb) {
+    try {
+      var rq = indexedDB.open("deck-analyzer", 1);
+      rq.onupgradeneeded = function () { rq.result.createObjectStore("kv"); };
+      rq.onsuccess = function () { cb(rq.result); };
+      rq.onerror = function () { cb(null); };
+    } catch (e) { cb(null); }
+  }
+  function save() {
+    idb(function (db) { if (!db) return; try { db.transaction("kv", "readwrite").objectStore("kv").put(S.decks, "decks"); } catch (e) { /* ignore */ } });
+  }
+  function restore(done) {
+    idb(function (db) {
+      if (!db) return done();
+      try {
+        var g = db.transaction("kv").objectStore("kv").get("decks");
+        g.onsuccess = function () { if (g.result && g.result.length) setDecks(g.result, false); done(); };
+        g.onerror = function () { done(); };
+      } catch (e) { done(); }
+    });
+  }
+
+  // ---------- loading data ----------
+  function setDecks(decks, persist) {
+    S.decks = decks;
+    S.events = A.eventsOf(decks);
+    var keep = S.picked;
+    S.picked = {};
+    S.events.forEach(function (e) { S.picked[e.abbr] = keep[e.abbr] !== undefined ? keep[e.abbr] : true; });
+    S.deckName = null; S.card = ""; S.player = null; S.similar = null;
+    S.cmpA = S.events.length ? S.events[0].abbr : null;
+    S.cmpB = S.events.length ? S.events[S.events.length - 1].abbr : null;
+    if (persist !== false) save();
+    render();
+  }
+
+  function rawDecksFrom(json) {
+    if (Array.isArray(json)) return json;
+    if (json && Array.isArray(json.decks)) return json.decks;
+    if (json && json.id != null) return [json];
+    return [];
+  }
+
+  function loadFiles(files) {
+    var list = Array.prototype.slice.call(files);
+    var added = [], bad = [], left = list.length;
+    if (!left) return;
+    list.forEach(function (f) {
+      var r = new FileReader();
+      r.onload = function () {
+        try {
+          rawDecksFrom(JSON.parse(r.result)).forEach(function (raw) { var d = A.normalizeDeck(raw); if (d) added.push(d); });
+        } catch (e) { bad.push(f.name); }
+        if (--left === 0) finishLoad(added, bad);
+      };
+      r.onerror = function () { bad.push(f.name); if (--left === 0) finishLoad(added, bad); };
+      r.readAsText(f);
+    });
+  }
+  function finishLoad(added, bad) {
+    var merged = A.mergeDecks(S.decks, added);
+    $("status").textContent = added.length + " decks read" + (bad.length ? ", could not read: " + bad.join(", ") : "");
+    setDecks(merged);
+  }
+
+  // ---------- views ----------
+  function viewField(decks) {
+    var rows = A.fieldStats(decks, [8, 16, 32]);
+    var h = '<p class="note">Share is how much of the field played the deck. Conversion at 8 is the deck\'s share of the top 8 divided by its share of the field. Above 1.0 it made the cut more often than its popularity suggests.</p>';
+    h += '<div class="tablewrap"><table class="data"><thead><tr><th>Deck</th><th>Decks</th><th>Share</th><th>Top 8</th><th>Top 16</th><th>Top 32</th><th>Conv 8</th><th>Conv 16</th><th>Conv 32</th><th>Avg place</th><th>Best</th></tr></thead><tbody>';
+    rows.forEach(function (r) {
+      function cv(n) { var v = r.conv[n]; return v == null ? '<span class="dim">n/a</span>' : '<span class="' + (v >= 1.2 ? "good" : v < 0.8 ? "badc" : "") + '">' + v.toFixed(2) + "</span>"; }
+      h += '<tr><td><button class="link" data-deckname="' + esc(r.name) + '">' + esc(r.name) + '</button></td><td class="num">' + r.count + '</td><td class="num"><span class="meter"><i style="width:' + Math.min(100, r.share * 100 * 3) + '%"></i></span>' + pct(r.share, 1) + "</td>" +
+        '<td class="num">' + r.top[8] + '</td><td class="num">' + r.top[16] + '</td><td class="num">' + r.top[32] + '</td><td class="num">' + cv(8) + '</td><td class="num">' + cv(16) + '</td><td class="num">' + cv(32) + '</td><td class="num">' + (r.avgPlacement == null ? "?" : r.avgPlacement.toFixed(1)) + '</td><td class="num">' + (r.best == null ? "?" : r.best) + "</td></tr>";
+    });
+    return h + "</tbody></table></div>";
+  }
+
+  function cardRows(rows, limit) {
+    return '<div class="tablewrap"><table class="data"><thead><tr><th>Card</th><th>In decks</th><th>Share</th><th>Copies</th><th>Avg</th></tr></thead><tbody>' +
+      rows.slice(0, limit || 60).map(function (r) {
+        return "<tr><td>" + card(r.name) + '</td><td class="num">' + r.decks + '</td><td class="num"><span class="meter"><i style="width:' + (r.pct * 100) + '%"></i></span>' + pct(r.pct) + "</td><td>" + copiesSplit(r.copies) + '</td><td class="num">' + r.avgCopies.toFixed(1) + "</td></tr>";
+      }).join("") + "</tbody></table></div>";
+  }
+
+  function viewDeck(decks) {
+    var names = A.fieldStats(decks).map(function (r) { return r.name; });
+    if (!names.length) return '<div class="empty">No decks in the selected events.</div>';
+    if (!S.deckName || names.indexOf(S.deckName) === -1) S.deckName = names[0];
+    var g = decks.filter(function (d) { return d.name === S.deckName; });
+    var st = A.fieldStats(decks).filter(function (r) { return r.name === S.deckName; })[0];
+    var h = '<div class="row"><select id="deckSel">' + names.map(function (n) { return '<option' + (n === S.deckName ? " selected" : "") + ">" + esc(n) + "</option>"; }).join("") +
+      '</select><label class="inline">Core means in at least <select id="coreSel">' + [60, 70, 80, 90, 100].map(function (n) { return '<option value="' + n + '"' + (S.coreAt * 100 === n ? " selected" : "") + ">" + n + "%</option>"; }).join("") + "</select> of the lists</label></div>";
+    h += '<div class="tiles"><div class="tile"><div class="v">' + g.length + '</div><div class="k">Lists</div></div><div class="tile"><div class="v">' + pct(st.share, 1) + '</div><div class="k">Of the field</div></div><div class="tile"><div class="v">' + (st.best == null ? "?" : plc(st.best)) + '</div><div class="k">Best finish</div></div><div class="tile"><div class="v">' + (st.conv[8] == null ? "n/a" : st.conv[8].toFixed(2)) + '</div><div class="k">Conversion at 8</div></div></div>';
+
+    h += "<h2>Best lists</h2>";
+    h += '<ul class="list panel">' + A.bestLists(g, sizes(), 8).map(function (d) {
+      return "<li>" + plTag(d) + '<span class="grow">' + deckLink(d, esc(d.builder)) + ' <span class="meta">' + esc(d.event) + "</span></span></li>";
+    }).join("") + "</ul>";
+
+    var cm = A.coreFlex(g, "main", S.coreAt), cs = A.cardTable(g, "side");
+    h += "<h2>Main deck</h2>";
+    h += '<h3>Core cards (' + cm.core.length + ")</h3>" + (cm.core.length ? cardRows(cm.core, 60) : '<div class="empty">No card reaches that share.</div>');
+    h += "<h3>Flex cards (" + cm.flex.length + ")</h3>" + (cm.flex.length ? cardRows(cm.flex, 40) : '<div class="empty">None.</div>');
+    h += "<h2>Side deck</h2>" + (cs.length ? cardRows(cs, 40) : '<div class="empty">No side decks recorded.</div>');
+    return h;
+  }
+
+  function viewCard(decks) {
+    var names = A.allCardNames(decks);
+    var h = '<div class="row"><input type="search" id="cardIn" list="cardList" placeholder="Type a card name" value="' + esc(S.card) + '" style="min-width:300px"><datalist id="cardList">' +
+      names.slice(0, 2500).map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + "</datalist></div>";
+    if (!S.card) return h + '<div class="empty">Pick a card to see who plays it and how those decks finished.</div>';
+    var match = names.filter(function (n) { return n.toLowerCase() === S.card.toLowerCase(); })[0];
+    if (!match) {
+      var near = names.filter(function (n) { return n.toLowerCase().indexOf(S.card.toLowerCase()) !== -1; }).slice(0, 12);
+      return h + '<div class="empty">No exact match.' + (near.length ? " Did you mean: " + near.map(function (n) { return '<button class="link" data-pickcard="' + esc(n) + '">' + esc(n) + "</button>"; }).join(", ") + "?" : "") + "</div>";
+    }
+    var u = A.cardUsage(decks, match, sizes());
+    h += "<h2>" + card(match) + "</h2>";
+    h += '<div class="tiles"><div class="tile"><div class="v">' + u.decks + '</div><div class="k">Decks playing it</div></div><div class="tile"><div class="v">' + pct(u.pct, 1) + '</div><div class="k">Of the field</div></div>' +
+      '<div class="tile"><div class="v">' + (u.avgRelWith == null ? "n/a" : pct(u.avgRelWith)) + '</div><div class="k">Avg finish with it (lower is better)</div></div><div class="tile"><div class="v">' + (u.avgRelWithout == null ? "n/a" : pct(u.avgRelWithout)) + '</div><div class="k">Avg finish without it</div></div></div>';
+    h += '<p class="note">Finish is shown as a share of the field, so 10% means the top tenth. A better finish with a card does not prove the card is the reason.</p>';
+    h += '<div class="two"><div class="panel"><h3>In which decks</h3><ul class="list">' + u.byDeck.map(function (b) { return '<li><span class="grow"><button class="link" data-deckname="' + esc(b.name) + '">' + esc(b.name) + '</button></span><span class="pl">' + b.count + "</span></li>"; }).join("") + "</ul></div>" +
+      '<div class="panel"><h3>Per event</h3><ul class="list">' + u.perEvent.map(function (e) { return '<li><span class="grow">' + esc(e.event) + '</span><span class="meter"><i style="width:' + e.pct * 100 + '%"></i></span><span class="pl">' + e.count + " of " + e.size + " (" + pct(e.pct) + ")</span></li>"; }).join("") + "</ul></div></div>";
+    h += '<div class="two" style="margin-top:16px"><div class="panel"><h3>Main deck copies</h3><ul class="list">' + [0, 1, 2, 3].map(function (n) { return '<li><span class="grow">' + (n === 0 ? "Not in the main deck" : n + (n === 1 ? " copy" : n === 3 ? " copies" : " copies")) + '</span><span class="pl">' + u.copies.main[n] + "</span></li>"; }).join("") + "</ul></div>" +
+      '<div class="panel"><h3>Side deck copies</h3><ul class="list">' + [0, 1, 2, 3].map(function (n) { return '<li><span class="grow">' + (n === 0 ? "Not in the side deck" : n + " " + (n === 1 ? "copy" : "copies")) + '</span><span class="pl">' + u.copies.side[n] + "</span></li>"; }).join("") + "</ul></div></div>";
+    h += "<h2>Best finishes with it</h2><ul class=\"list panel\">" + u.best.map(function (d) { return "<li>" + plTag(d) + '<span class="grow">' + deckLink(d, esc(d.name)) + ' <span class="meta">' + who(d) + "</span></span></li>"; }).join("") + "</ul>";
+    return h;
+  }
+
+  function viewCompare() {
+    if (S.events.length < 2) return '<div class="empty">Load at least two events to compare them.</div>';
+    function sel(id, val) { return '<select id="' + id + '">' + S.events.map(function (e) { return '<option value="' + esc(e.abbr) + '"' + (e.abbr === val ? " selected" : "") + ">" + esc(e.abbr) + " (" + e.size + " decks)</option>"; }).join("") + "</select>"; }
+    var h = '<div class="row"><label class="inline">From ' + sel("cmpA", S.cmpA) + '</label><label class="inline">to ' + sel("cmpB", S.cmpB) + "</label></div>";
+    var a = S.decks.filter(function (d) { return d.event === S.cmpA; }), b = S.decks.filter(function (d) { return d.event === S.cmpB; });
+    if (S.cmpA === S.cmpB) return h + '<div class="empty">Pick two different events.</div>';
+    var c = A.compareEvents(a, b, { minSupport: 3 });
+    h += "<h2>Deck share</h2>";
+    h += '<div class="tablewrap"><table class="data"><thead><tr><th>Deck</th><th>' + esc(S.cmpA) + "</th><th>" + esc(S.cmpB) + "</th><th>Change</th><th>Best " + esc(S.cmpA) + "</th><th>Best " + esc(S.cmpB) + "</th></tr></thead><tbody>" +
+      c.decks.map(function (r) {
+        var cls = r.delta > 0.005 ? "good" : r.delta < -0.005 ? "badc" : "dim";
+        return '<tr><td><button class="link" data-deckname="' + esc(r.name) + '">' + esc(r.name) + '</button></td><td class="num">' + pct(r.shareA, 1) + '</td><td class="num">' + pct(r.shareB, 1) + '</td><td class="num ' + cls + '">' + (r.delta > 0 ? "+" : "") + (r.delta * 100).toFixed(1) + ' pts</td><td class="num">' + (r.bestA == null ? "none" : r.bestA) + '</td><td class="num">' + (r.bestB == null ? "none" : r.bestB) + "</td></tr>";
+      }).join("") + "</tbody></table></div>";
+    function cl(list) {
+      return '<ul class="list">' + list.map(function (r) { return '<li><span class="grow">' + card(r.name) + '</span><span class="meta">' + pct(r.pctA) + " to " + pct(r.pctB) + '</span><span class="pl ' + (r.delta > 0 ? "top" : "") + '">' + (r.delta > 0 ? "+" : "") + (r.delta * 100).toFixed(0) + " pts</span></li>"; }).join("") + "</ul>";
+    }
+    h += '<h2>Cards in the main or side deck</h2><p class="note">Share of decks that run the card, cards seen in at least 3 decks of either event.</p><div class="two"><div class="panel"><h3>Rising</h3>' + cl(c.risers) + '</div><div class="panel"><h3>Falling</h3>' + cl(c.fallers) + "</div></div>";
+    return h;
+  }
+
+  function diffTags(d) {
+    var h = "";
+    h += tagList(d.added, "add", function (x) { return "+" + x.copies + " " + x.name; });
+    h += tagList(d.removed, "rem", function (x) { return "-" + x.copies + " " + x.name; });
+    h += tagList(d.changed, "chg", function (x) { return x.name + " " + x.from + " to " + x.to; });
+    return h;
+  }
+
+  function viewPlayers() {
+    var ps = A.players(S.decks).sort(function (a, b) { return b.decks.length - a.decks.length || (a.name < b.name ? -1 : 1); });
+    var q = S.playerQuery.toLowerCase();
+    var shown = ps.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) !== -1; }).slice(0, 80);
+    var h = '<div class="row"><input type="search" id="plQ" placeholder="Search a player" value="' + esc(S.playerQuery) + '"><select id="plSel"><option value="">Choose a player</option>' +
+      shown.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === S.player ? " selected" : "") + ">" + esc(p.name) + " (" + p.decks.length + (p.decks.length === 1 ? " deck" : " decks") + ")</option>"; }).join("") + "</select></div>";
+    if (!S.player) return h + '<div class="empty">Players with more than one deck are listed first, so you can see what they changed between events.</div>';
+    var hist = A.playerHistory(S.decks, S.player);
+    if (!hist) return h;
+    h += "<h2>" + esc(hist.player.name) + "</h2>";
+    h += '<div class="step">' + hist.player.decks.map(function (d, i) {
+      var step = i > 0 ? hist.steps[i - 1] : null;
+      var out = '<div>' + plTag(d) + " <b>" + esc(d.event) + "</b> " + deckLink(d, esc(d.name)) + " </div>";
+      if (step) {
+        var df = step.diff;
+        out += '<div class="cb">' + (df.sameDeckName ? "Same deck as last time." : "Switched deck from " + esc(step.from.name) + ".") + "</div>";
+        out += '<div class="cb">Main deck</div>' + (diffTags(df.main) || '<div class="cb dim">No changes.</div>');
+        out += '<div class="cb">Side deck</div>' + (diffTags(df.side) || '<div class="cb dim">No changes.</div>');
+      }
+      return '<div style="margin-bottom:16px">' + out + "</div>";
+    }).join("") + "</div>";
+    return h;
+  }
+
+  function viewWeird(decks) {
+    if (decks.length < 10) return '<div class="empty">Load more decks first. This needs a decent number of lists to know what is normal.</div>';
+    var rare = A.rareCards(decks, S.rareMax);
+    var h = '<div class="row"><label class="inline">Rare means played in at most <select id="rareSel">' + [1, 2, 3, 5].map(function (n) { return '<option value="' + n + '"' + (S.rareMax === n ? " selected" : "") + ">" + n + (n === 1 ? " deck" : " decks") + "</option>"; }).join("") + "</select></label></div>";
+    h += "<h2>Rarest cards (" + rare.length + ")</h2>";
+    h += rare.length ? '<ul class="list panel">' + rare.slice(0, 40).map(function (r) {
+      return '<li><span class="grow">' + card(r.name) + '<div class="meta">' + r.decks.map(function (d) { return deckLink(d, esc(d.builder) + " (" + esc(d.name) + ", " + plc(d.placement) + ")"); }).join(" · ") + "</div></span></li>";
+    }).join("") + "</ul>" : '<div class="empty">Nothing that rare in this selection.</div>';
+    var wz = A.weirdness(decks, 12);
+    h += '<h2>Strangest decks</h2><p class="note">Each list is scored by how unusual its cards are compared with every other list loaded. The cards that pull the score up are shown.</p><ul class="list panel">' + wz.map(function (w) {
+      return "<li>" + plTag(w.deck) + '<span class="grow">' + deckLink(w.deck, esc(w.deck.name)) + ' <span class="meta">' + who(w.deck) + '</span><div class="tags">' + w.odd.map(function (o) { return '<span class="tag" data-card="' + esc(o.name) + '">' + esc(o.name) + " (" + o.decks + ")</span>"; }).join("") + '</div></span><span class="pl">' + w.score.toFixed(2) + "</span></li>";
+    }).join("") + "</ul>";
+    var dv = A.deviation(decks, 5, 12);
+    h += '<h2>Furthest from the usual list</h2><p class="note">Compared with the cards most lists of the same deck name play. Only deck names with at least 5 lists are checked.</p><ul class="list panel">' + dv.map(function (r) {
+      return "<li>" + plTag(r.deck) + '<span class="grow">' + deckLink(r.deck, esc(r.deck.name)) + ' <span class="meta">' + who(r.deck) + " of " + r.group + " lists</span>" + tagList(r.extras.slice(0, 6).map(function (n) { return { name: n }; }), "add", function (x) { return "+" + x.name; }) + tagList(r.missing.slice(0, 6).map(function (n) { return { name: n }; }), "rem", function (x) { return "-" + x.name; }) + '</span><span class="pl">' + pct(r.distance) + "</span></li>";
+    }).join("") + "</ul>";
+    return h;
+  }
+
+  function viewSimilar(decks) {
+    var h = '<p class="note">Paste your list as a ydke link, a .ydk file or lines like "3 Jar of Greed". Passcodes only work for cards that appear in the loaded decks.</p>' +
+      '<textarea id="paste" placeholder="ydke://...   or   3 Jar of Greed">' + esc(S.pasted) + '</textarea><div class="row" style="margin-top:8px"><button class="primary" id="simGo" type="button">Find similar decks</button></div>';
+    if (S.similar) {
+      var s = S.similar;
+      if (s.error) h += '<div class="empty">' + esc(s.error) + "</div>";
+      else {
+        h += "<h2>Closest lists</h2>" + (s.unknown ? '<p class="note">' + s.unknown + " card codes were not recognised and are left out.</p>" : "") + '<ul class="list panel">' + s.rows.map(function (r) {
+          return "<li>" + plTag(r.deck) + '<span class="grow">' + deckLink(r.deck, esc(r.deck.name)) + ' <span class="meta">' + who(r.deck) + "</span>" +
+            (r.theyRun.length ? '<div class="cb">They run, you do not</div>' + tagList(r.theyRun.slice(0, 10), "add", function (x) { return "+" + x.copies + " " + x.name; }) : "") +
+            (r.youRun.length ? '<div class="cb">You run, they do not</div>' + tagList(r.youRun.slice(0, 10), "rem", function (x) { return "-" + x.copies + " " + x.name; }) : "") +
+            '</span><span class="pl top">' + pct(r.sim) + "</span></li>";
+        }).join("") + "</ul>";
+      }
+    }
+    return h;
+  }
+
+  // ---------- deck sheet ----------
+  function openDeck(id) {
+    var d = S.decks.filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!d) return;
+    function zone(title, z) {
+      var keys = Object.keys(z).sort(function (a, b) { return z[b] - z[a] || (a < b ? -1 : 1); });
+      if (!keys.length) return "";
+      return "<h3>" + title + " (" + keys.reduce(function (s, k) { return s + z[k]; }, 0) + ')</h3><div class="cardgrid">' + keys.map(function (k) { return '<div class="it"><b>' + z[k] + "x</b>" + card(k) + "</div>"; }).join("") + "</div>";
+    }
+    $("sheet").innerHTML = '<header><div><h2>' + esc(d.name) + '</h2><div class="cb">' + esc(d.builder) + " &middot; " + plc(d.placement) + " at " + esc(d.event) + '</div></div><button class="ghost" id="closeSheet" type="button">Close</button></header>' +
+      zone("Main deck", d.main) + zone("Extra deck", d.extra) + zone("Side deck", d.side);
+    $("modal").hidden = false;
+    if (window.CardArt) CardArt.decorate($("sheet"));
+  }
+
+  // ---------- page ----------
+  var TABS = [["field", "Field"], ["deck", "Deck"], ["card", "Card"], ["compare", "Compare events"], ["players", "Players"], ["weird", "Weird"], ["similar", "Find similar"]];
+
+  function render() {
+    var has = S.decks.length > 0;
+    $("chips").innerHTML = S.events.map(function (e) { return '<button class="chip" type="button" data-ev="' + esc(e.abbr) + '" aria-pressed="' + !!S.picked[e.abbr] + '">' + esc(e.abbr) + " <small>" + e.size + "</small></button>"; }).join("");
+    $("evrow").hidden = !has;
+    $("tabs").hidden = !has;
+    $("tabs").innerHTML = TABS.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + t[1] + "</button>"; }).join("");
+    var out = $("out");
+    if (!has) {
+      out.innerHTML = '<div class="empty">No decks loaded yet. Load the file saved by the extension, or try the example data to see how everything looks.</div>';
+      $("status").textContent = $("status").textContent || "";
+      return;
+    }
+    $("status").textContent = S.decks.length + " decks, " + S.events.length + (S.events.length === 1 ? " event" : " events");
+    var decks = view();
+    var h;
+    if (!decks.length && S.tab !== "compare" && S.tab !== "players") h = '<div class="empty">Pick at least one event above.</div>';
+    else if (S.tab === "field") h = viewField(decks);
+    else if (S.tab === "deck") h = viewDeck(decks);
+    else if (S.tab === "card") h = viewCard(decks);
+    else if (S.tab === "compare") h = viewCompare();
+    else if (S.tab === "players") h = viewPlayers();
+    else if (S.tab === "weird") h = viewWeird(decks);
+    else h = viewSimilar(decks);
+    var keep = document.activeElement && document.activeElement.id;
+    var pos = keep && document.activeElement.selectionStart;
+    out.innerHTML = h;
+    if (keep && $(keep) && /^(cardIn|plQ)$/.test(keep)) { $(keep).focus(); try { $(keep).setSelectionRange(pos, pos); } catch (e) { /* ignore */ } }
+    if (window.CardArt) CardArt.decorate(out);
+  }
+
+  // ---------- events ----------
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    var el;
+    if ((el = t.closest("[data-tab]"))) { S.tab = el.getAttribute("data-tab"); render(); return; }
+    if ((el = t.closest("[data-ev]"))) { var k = el.getAttribute("data-ev"); S.picked[k] = !S.picked[k]; render(); return; }
+    if ((el = t.closest("[data-deckname]"))) { S.deckName = el.getAttribute("data-deckname"); S.tab = "deck"; render(); window.scrollTo(0, 0); return; }
+    if ((el = t.closest("[data-open]"))) { openDeck(el.getAttribute("data-open")); return; }
+    if ((el = t.closest("[data-pickcard]"))) { S.card = el.getAttribute("data-pickcard"); render(); return; }
+    if (t.id === "closeSheet" || t.id === "modal") { $("modal").hidden = true; return; }
+    if (t.id === "simGo") {
+      S.pasted = $("paste").value;
+      var parsed = A.parseList(S.pasted, A.passcodeMap(S.decks));
+      var total = Object.keys(parsed.main).reduce(function (s, k) { return s + parsed.main[k]; }, 0);
+      if (!total) S.similar = { error: "No cards could be read from that. Check the format, or load decks that include those cards." };
+      else S.similar = { rows: A.findSimilar(parsed.main, view(), 10), unknown: parsed.unknown.length };
+      render();
+    }
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.id === "deckSel") { S.deckName = t.value; render(); }
+    else if (t.id === "coreSel") { S.coreAt = +t.value / 100; render(); }
+    else if (t.id === "cmpA") { S.cmpA = t.value; render(); }
+    else if (t.id === "cmpB") { S.cmpB = t.value; render(); }
+    else if (t.id === "plSel") { S.player = t.value || null; render(); }
+    else if (t.id === "rareSel") { S.rareMax = +t.value; render(); }
+    else if (t.id === "cardIn") { S.card = t.value.trim(); render(); }
+    else if (t.id === "file") { loadFiles(t.files); t.value = ""; }
+  });
+  document.addEventListener("input", function (e) {
+    if (e.target.id === "plQ") { S.playerQuery = e.target.value; render(); }
+    else if (e.target.id === "cardIn" && e.target.value.trim().length > 2) {
+      var v = e.target.value.trim();
+      if (A.allCardNames(view()).some(function (n) { return n.toLowerCase() === v.toLowerCase(); })) { S.card = v; render(); }
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") $("modal").hidden = true;
+    if (e.key === "Enter" && e.target.id === "cardIn") {
+      var v = e.target.value.trim().toLowerCase();
+      var hit = A.allCardNames(view()).filter(function (n) { return n.toLowerCase().indexOf(v) !== -1; })[0];
+      if (v && hit) { S.card = hit; render(); }
+    }
+  });
+  document.addEventListener("dragover", function (e) { e.preventDefault(); });
+  document.addEventListener("drop", function (e) { e.preventDefault(); if (e.dataTransfer && e.dataTransfer.files.length) loadFiles(e.dataTransfer.files); });
+
+  $("example").addEventListener("click", function () {
+    var raw = window.SampleData.build();
+    setDecks(raw.decks.map(A.normalizeDeck));
+    $("status").textContent = "Example data loaded. All of it is made up.";
+  });
+  $("clear").addEventListener("click", function () { setDecks([]); $("status").textContent = ""; });
+  $("pick").addEventListener("click", function () { $("file").click(); });
+
+  if (window.CardArt) {
+    CardArt.enablePreview(document.body);
+    CardArt.onUpdate(function () { CardArt.decorate(document.body); });
+  }
+  restore(render);
+})();
+
+</script>
+</body>
+</html>
